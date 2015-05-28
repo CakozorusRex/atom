@@ -41,6 +41,7 @@ class TokenizedBuffer extends Model
       @rootScopeDescriptor = new ScopeDescriptor(scopes: [@grammar.scopeName])
       @trackConfigSettings()
       @buildInitialLinesInBackground()
+      @invalidRows = []
     else
       @reloadGrammar()
 
@@ -158,21 +159,31 @@ class TokenizedBuffer extends Model
         @retokenizeLines()
 
   buildInitialLinesInBackground: ->
+    console.log "buildInitialLinesInBackground"
+    @tokenizedLines = []
+
     taskPath = require.resolve('./initial-tokenized-lines-task')
     params = {
       filePath: @buffer.getPath()
       invisibles: @getInvisiblesToShow()
       tabLength: @getTabLength()
       rootScopeId: @grammar.startIdForScope(@grammar.scopeName)
+      chunkSize: @chunkSize
     }
 
     task = Task.once taskPath, params, (lineStates) =>
-      @tokenizedLines = lineStates.map (state) =>
+      global.debug = true
+      @emitter.emit 'did-load'
+
+    task.on 'chunk', (lineStates) =>
+      console.log "got chunk", lineStates.length
+      lines = lineStates.map (state) =>
         line = new TokenizedLine
         line.tokenIterator = @tokenIterator
         line[key] = value for key, value of state
+        debugger unless line?
         line
-      @emitter.emit 'did-load'
+      @tokenizedLines.push(lines...)
 
   tokenizeInBackground: ->
     return if not @visible or @pendingChunk or not @isAlive()

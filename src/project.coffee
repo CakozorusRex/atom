@@ -13,6 +13,7 @@ Grim = require 'grim'
 DefaultDirectoryProvider = require './default-directory-provider'
 Model = require './model'
 TextEditor = require './text-editor'
+TextEditorLoader = require './text-editor-loader'
 Task = require './task'
 GitRepositoryProvider = require './git-repository-provider'
 
@@ -376,11 +377,6 @@ class Project extends Model
   #
   # Returns a promise that resolves to the {TextBuffer}.
   buildBuffer: (absoluteFilePath) ->
-    if fs.getSizeSync(absoluteFilePath) >= 2 * 1048576 # 2MB
-      error = new Error("Atom can only handle files < 2MB for now.")
-      error.code = 'EFILETOOLARGE'
-      throw error
-
     buffer = new TextBuffer({filePath: absoluteFilePath})
     @addBuffer(buffer)
     buffer.load()
@@ -410,8 +406,15 @@ class Project extends Model
     buffer?.destroy()
 
   buildEditorForBuffer: (buffer, editorOptions) ->
-    editor = new TextEditor(_.extend({buffer, registerEditor: true}, editorOptions))
-    editor
+    # if fs.getSizeSync(absoluteFilePath) >= 2 * 1048576 # 2MB
+    largeFileMode = fs.getSizeSync(buffer.getPath()) >= 1048
+
+    editor = new TextEditor(_.extend({buffer, registerEditor: true, largeFileMode}, editorOptions))
+
+    if editor.isLoaded()
+      editor
+    else
+      new TextEditorLoader(editor)
 
   eachBuffer: (args...) ->
     subscriber = args.shift() if args.length > 1

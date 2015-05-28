@@ -87,12 +87,11 @@ class TextEditor extends Model
 
     buffer ?= new TextBuffer
 
-    @largeFileMode ?= buffer?.getLineCount() > 10000
-
     @displayBuffer ?= new DisplayBuffer({buffer, tabLength, softWrapped, ignoreInvisibles: @mini, @largeFileMode})
     @buffer = @displayBuffer.buffer
 
     if @largeFileMode
+      @loaded = false
       @displayBuffer.onDidLoad(=> @finalizeConstruction(params))
     else
       @finalizeConstruction(params)
@@ -100,6 +99,7 @@ class TextEditor extends Model
   finalizeConstruction: (params) ->
     {initialLine, initialColumn, registerEditor, suppressCursorCreation, lineNumberGutterVisible} = params
 
+    @loaded = true
     @softTabs = @usesSoftTabs() ? @softTabs ? atom.config.get('editor.softTabs') ? true
 
     for marker in @findMarkers(@getSelectionMarkerAttributes())
@@ -484,6 +484,8 @@ class TextEditor extends Model
     for marker in @findMarkers(editorId: @id)
       marker.copy(editorId: newEditor.id, preserveFolds: true)
     newEditor
+
+  isLoaded: -> @loaded
 
   # Controls visibility based on the given {Boolean}.
   setVisible: (visible) -> @displayBuffer.setVisible(visible)

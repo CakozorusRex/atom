@@ -375,6 +375,10 @@ class Pane extends Model
     @container?.didDestroyPaneItem({item, index, pane: this}) if destroyed
     @destroy() if @items.length is 0 and atom.config.get('core.destroyEmptyPanes')
 
+  replaceItem: (oldItem, newItem) ->
+    @addItem(newItem, @items.indexOf(oldItem) + 1)
+    @removeItem(oldItem)
+
   # Public: Move the given item to the given index.
   #
   # * `item` The item to move.
